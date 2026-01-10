@@ -1,0 +1,24 @@
+# Arduino build artifacts
+*.elf
+*.hex
+*.bin
+*.map
+*.eep
+*.lst
+*.sym
+
+# Arduino IDE
+*.ino~
+*.cpp~
+*.h~
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# PlatformIO (for later)
+.pio/

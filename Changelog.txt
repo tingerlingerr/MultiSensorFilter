@@ -1,0 +1,6 @@
+v0.0.1: Initial release
+
+7 filter implementations
+Configuration-based setup
+Arduino compatibility
+
