@@ -1,5 +1,5 @@
 # Object
-SoftwareAnalogFilters	KEYWORD1
+MultiSensorFilter	KEYWORD1
 
 # Methods and Functions
 FilterConfig	KEYWORD2

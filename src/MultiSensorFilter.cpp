@@ -1,10 +1,10 @@
-#include "SoftwareAnalogFilters.h"
+#include "MultiSensorFilter.h"
 
-SoftwareAnalogFilters::SoftwareAnalogFilters() : _filters(nullptr), _filter_count(0), _acq_hz(100), _current_filter_idx(0) {
+MultiSensorFilter::MultiSensorFilter() : _filters(nullptr), _filter_count(0), _acq_hz(100), _current_filter_idx(0) {
     // constructor
 }
 
-void SoftwareAnalogFilters::Init(FilterConfig* config_list, size_t list_len, float acq_rate_hz) {
+void MultiSensorFilter::Init(FilterConfig* config_list, size_t list_len, float acq_rate_hz) {
     
     if(_filters!= nullptr) free(_filters);
     
@@ -101,7 +101,7 @@ void SoftwareAnalogFilters::Init(FilterConfig* config_list, size_t list_len, flo
 
 }// init
 
-float SoftwareAnalogFilters::analog_filter(uint8_t pin) {
+float MultiSensorFilter::analog_filter(uint8_t pin) {
     int filter_idx = _find_filter_index(pin);
     if (filter_idx == -1) return analogRead(pin) * _ADC_SCALE;
 
@@ -132,7 +132,7 @@ float SoftwareAnalogFilters::analog_filter(uint8_t pin) {
 // Filter implementation methods
 
 // 1. MOV_AVG
-float SoftwareAnalogFilters::_mov_avg_filter_read(uint8_t pin, uint8_t filter_samples) {
+float MultiSensorFilter::_mov_avg_filter_read(uint8_t pin, uint8_t filter_samples) {
     if (filter_samples <= 1) return analogRead(pin) * _ADC_SCALE;
     
     uint16_t new_val = analogRead(pin);
@@ -140,13 +140,13 @@ float SoftwareAnalogFilters::_mov_avg_filter_read(uint8_t pin, uint8_t filter_sa
 
     filt.sum = filt.sum - filt.ibuff[filt.idx] + new_val;
     filt.ibuff[filt.idx] = new_val;
-    filt.idx = (filt.idx + 1) % filter_samples;
+    if(++filt.idx > filter_samples) filt.idx = 0;
     
     return (filt.sum / filter_samples) * _ADC_SCALE;
 }
 
 // 2. MEDIAN
-float SoftwareAnalogFilters::_median_filter_read(uint8_t pin, uint8_t filter_samples) {
+float MultiSensorFilter::_median_filter_read(uint8_t pin, uint8_t filter_samples) {
     
     if(filter_samples <= 1) return analogRead(pin) * _ADC_SCALE;
     
@@ -154,7 +154,7 @@ float SoftwareAnalogFilters::_median_filter_read(uint8_t pin, uint8_t filter_sam
     Filter& filt = _filters[_current_filter_idx];
 
     filt.ibuff[filt.idx] = new_val;
-    filt.idx = (filt.idx + 1) % filter_samples;
+    if(++filt.idx > filter_samples) filt.idx = 0;
 
     uint16_t* temp = (uint16_t*)malloc(filter_samples * sizeof(uint16_t));
     if (!temp) return new_val * _ADC_SCALE;
@@ -188,7 +188,7 @@ float SoftwareAnalogFilters::_median_filter_read(uint8_t pin, uint8_t filter_sam
 }
 
 // 3. EXPONENTIAL
-float SoftwareAnalogFilters::_exp_iir_filter_read(uint8_t pin, float alpha) {
+float MultiSensorFilter::_exp_iir_filter_read(uint8_t pin, float alpha) {
     
     /*
         Base Eqn: y[n] = _alpha * x[n] + (1-_alpha) * (y[n-1])
@@ -208,8 +208,7 @@ float SoftwareAnalogFilters::_exp_iir_filter_read(uint8_t pin, float alpha) {
     
     Filter& filt = _filters[_current_filter_idx];
     
-    
-    memmove(&filt.ibuff[0], &filt.ibuff[1], sizeof(uint16_t));
+    filt.ibuff[0] = filt.ibuff[1];
     float filt_op = alpha * analogRead(pin) + (1 - alpha) * filt.ibuff[0];
     filt.ibuff[1] = filt_op;
 
@@ -217,7 +216,7 @@ float SoftwareAnalogFilters::_exp_iir_filter_read(uint8_t pin, float alpha) {
 }
 
 // 4. BUTTER 2ND ORDER BUTTERWORTH FILTERS
-void SoftwareAnalogFilters::_butter2_init(uint8_t filter_type, uint8_t idx) {
+void MultiSensorFilter::_butter2_init(uint8_t filter_type, uint8_t idx) {
     Filter& filt = _filters[idx];
     
     float _w0 = 2 * PI * filt.param1 / _acq_hz;
@@ -267,7 +266,7 @@ void SoftwareAnalogFilters::_butter2_init(uint8_t filter_type, uint8_t idx) {
 
 }
 
-float SoftwareAnalogFilters::_butter_order2_read(uint8_t pin) {
+float MultiSensorFilter::_butter_order2_read(uint8_t pin) {
     
     /*
         Base Eqn: y[n] = b0 ​* x[n] + b1 * ​x[n−1] + b2 * ​x[n−2] − a1 * ​y[n−1] − a2 * ​y[n−2]
@@ -308,27 +307,28 @@ float SoftwareAnalogFilters::_butter_order2_read(uint8_t pin) {
     Filter& filt = _filters[_current_filter_idx];
     
     // Shift input history
-    memmove(&filt.fbuff[5], &filt.fbuff[6], sizeof(float));
-    memmove(&filt.fbuff[6], &filt.fbuff[7], sizeof(float));
-    filt.fbuff[7] = analogRead(pin) * _ADC_SCALE;
+    filt.fbuff[5] = filt.fbuff[6];  // x[n-1] becomes x[n-2]
+    filt.fbuff[6] = filt.fbuff[7];  // x[n]   becomes x[n-1]
+    filt.fbuff[7] = analogRead(pin) * _ADC_SCALE;   // new x[n]
 
     // Shift y
-    memmove(&filt.fbuff[8], &filt.fbuff[9], sizeof(float));
-    memmove(&filt.fbuff[9], &filt.fbuff[10], sizeof(float));
+    filt.fbuff[8] = filt.fbuff[9];  // y[n-1] becomes y[n-2]
+    filt.fbuff[9] = filt.fbuff[10]; // y[n]   becomes y[n-1]
 
-    // Calculate new y
+    // Calculate new y[n]
     float filt_op = filt.fbuff[4] * filt.fbuff[7] // b0 * xn
                   + filt.fbuff[3] * filt.fbuff[6] // b1 * x(n-1)
                   + filt.fbuff[2] * filt.fbuff[5] // b2 * x(n-2)
                   - filt.fbuff[1] * filt.fbuff[9] // a1 * y(n-1)
                   - filt.fbuff[0] * filt.fbuff[8];// a2 * y(n-2)
     
-    filt.fbuff[10] = filt_op;
+    filt.fbuff[10] = filt_op;   // store new y[n]
+    
     return filt_op;
 }
 
 // Utility functions
-inline int8_t SoftwareAnalogFilters::_find_filter_index(uint8_t pin) {
+int8_t MultiSensorFilter::_find_filter_index(uint8_t pin) {
     for (size_t i = 0; i < _filter_count; i++) {
         if (_filters[i].pin == pin)
             return i;

@@ -49,7 +49,7 @@
 #include "Arduino.h"
 #include <math.h>
 
-#define MULTI_SENSOR_FILTER_VERSION (F("0.0.1"))
+#define MULTI_SENSOR_FILTER_VERSION (F("0.0.2"))
 
 // Filter types
 typedef enum : uint8_t {
@@ -76,10 +76,10 @@ struct FilterConfig {
     float param2;                // Q value for 2nd order butterworth
 };
 
-class SoftwareAnalogFilters {
+class MultiSensorFilter {
 
 public:
-    SoftwareAnalogFilters();
+    MultiSensorFilter();
     
     /**
     *  Initialises all filter channels with circular buffers. Safe, dynamically allocated memory at first run.
@@ -106,14 +106,14 @@ public:
     *
     * \return number of filters declared by user
     */
-    size_t get_filter_count() return _filter_count; 
+    size_t get_filter_count() { return _filter_count; }
 
     /**
     *  Returns used defined signal acq rate
     *
     * \return user defined signal acq rate
     */
-    float get_acq_hz() return _acq_hz;
+    float get_acq_hz() { return _acq_hz; }
 
 private:
 
@@ -189,7 +189,7 @@ private:
     * \param[in] GPIO pin
     * \return idx of called filter
     */
-    inline int8_t _find_filter_index(uint8_t pin);
+    int8_t _find_filter_index(uint8_t pin);
 
     static constexpr float _ADC_SCALE = 3.3 / 4095.0;
 };

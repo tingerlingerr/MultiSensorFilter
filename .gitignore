@@ -22,3 +22,7 @@ Thumbs.db
 
 # PlatformIO (for later)
 .pio/
+
+# Results docx
+*.docx
+~$*.docx

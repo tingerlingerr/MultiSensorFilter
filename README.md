@@ -1,4 +1,4 @@
-# Software Analog Filters for Arduino ![C++](https://img.shields.io/badge/C++-red) ![Arduino](https://img.shields.io/badge/Arduino-teal)
+# Multi Sensor Software Analog Filters for Arduino ![C++](https://img.shields.io/badge/C++-red) ![Arduino](https://img.shields.io/badge/Arduino-teal)
 
 ## **About**
 A lightweight, efficient Arduino library that implements various software-based analog filters aimed for real-time signal processing. Large-scale projects usually use multimodal sensor data, each of which may require different filters. This library was born from a genuine requirement at my research job. Perfect for quick experimentation between different filters for smoothing sensor data, removing noise, and signal conditioning without additional hardware.
