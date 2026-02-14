@@ -39,11 +39,11 @@ void MultiSensorFilter::Init(FilterConfig* config_list, size_t list_len, float a
 
         switch(_filters[i].filter_type) {
 
-            case 1: { // MOV_AVG
+            case MOV_AVG: {
                 uint8_t samples = (uint8_t)_filters[i].param1;
                 if (samples > 50) samples = 50;  // moving avg window capped at 50
 
-                _filters[i].ibuff = (uint16_t*)calloc(samples, sizeof(uint16_t));
+                _filters[i].ibuff = (uint16_t*)malloc(samples * sizeof(uint16_t));
                 if (!_filters[i].ibuff) return;
                 
                 for (uint8_t n = 0; n < samples; n++) {
@@ -54,10 +54,10 @@ void MultiSensorFilter::Init(FilterConfig* config_list, size_t list_len, float a
                 break;
             }
 
-            case 2:  { // MEDIAN
+            case MEDIAN:  { 
                 uint8_t samples = (uint8_t)_filters[i].param1;
                 if (samples > 50) samples = 50;  // median filter window capped at 50
-                _filters[i].ibuff = (uint16_t*)calloc(samples, sizeof(uint16_t));
+                _filters[i].ibuff = (uint16_t*)malloc(samples * sizeof(uint16_t));
                 if (!_filters[i].ibuff) return;
                 
                 for (uint8_t n = 0; n < samples; n++) {
@@ -67,10 +67,10 @@ void MultiSensorFilter::Init(FilterConfig* config_list, size_t list_len, float a
                 break;
             }
 
-            case 3: { // EXPONENTIAL
+            case EXPONENTIAL: { 
                 if(config_list[i].param1 < 0 || config_list[i].param1 > 1) return;
 
-                _filters[i].ibuff = (uint16_t*)calloc(2, sizeof(uint16_t));
+                _filters[i].ibuff = (uint16_t*)malloc(2*sizeof(uint16_t));
                 if (!_filters[i].ibuff) return;
 
                 _filters[i].ibuff[0] = 0;
@@ -79,20 +79,33 @@ void MultiSensorFilter::Init(FilterConfig* config_list, size_t list_len, float a
                 break;
             }
 
-            case 4:     // BUTTER2 LPF
-            case 5:     // BUTTER2 HPF
-            case 6:     // BUTTER2 BPF
-            case 7: {   // BUTTER2 NOTCH
-                if(config_list[i].param1 < acq_rate_hz / 2) return;
+            case BUTTER2_LPF:     
+            case BUTTER2_HPF:     
+            case BUTTER2_BPF:     
+            case BUTTER2_NOTCH: {   
+                if(config_list[i].param1 <= 0 || config_list[i].param1 >= acq_rate_hz / 2) return;
                 if(config_list[i].param2 < 0) return;
 
 
-                _filters[i].fbuff = (float*)calloc(11, sizeof(float));
+                _filters[i].fbuff = (float*)malloc(11*sizeof(float));
                 if (!_filters[i].fbuff) return;
 
                 _butter2_init(_filters[i].filter_type, i);
 
                 break;
+
+
+            case LINEAR_KALMAN:
+
+                _filters[i].fbuff = (float*)malloc(3*sizeof(float));
+                if(!_filters[i].fbuff) return;
+
+                _filters[i].fbuff[0] = 1.0; // P initial uncertainty
+                _filters[i].fbuff[1] = 1.0; // K initial gain
+                _filters[i].fbuff[2] = analogRead(_filters[i].pin) * _ADC_SCALE;    // x (estimation)
+
+                break;
+
             }
         }// Switch
     }
@@ -109,14 +122,17 @@ float MultiSensorFilter::analog_filter(uint8_t pin) {
     Filter& filt = _filters[filter_idx];
 
     switch (filt.filter_type) {
-        case 1: return _mov_avg_filter_read(pin, filt.param1);
-        case 2: return _median_filter_read(pin, filt.param1);
-        case 3: return _exp_iir_filter_read(pin, filt.param1);
-        case 4: 
-        case 5: 
-        case 6: 
-        case 7: 
+        case MOV_AVG: return _mov_avg_filter_read(pin, filt.param1);
+        case MEDIAN: return _median_filter_read(pin, filt.param1);
+        case EXPONENTIAL: return _exp_iir_filter_read(pin, filt.param1);
+        case BUTTER2_LPF: 
+        case BUTTER2_HPF: 
+        case BUTTER2_BPF: 
+        case BUTTER2_NOTCH: 
                 return _butter_order2_read(pin);
+        
+        case LINEAR_KALMAN: return _linear_kalman_read(pin, filt.param1, filt.param2);
+        
         default: 
                 return analogRead(pin) * _ADC_SCALE;
     }
@@ -140,7 +156,8 @@ float MultiSensorFilter::_mov_avg_filter_read(uint8_t pin, uint8_t filter_sample
 
     filt.sum = filt.sum - filt.ibuff[filt.idx] + new_val;
     filt.ibuff[filt.idx] = new_val;
-    if(++filt.idx > filter_samples) filt.idx = 0;
+    filt.idx = (filt.idx + 1) % filter_samples;
+
     
     return (filt.sum / filter_samples) * _ADC_SCALE;
 }
@@ -226,28 +243,28 @@ void MultiSensorFilter::_butter2_init(uint8_t filter_type, uint8_t idx) {
     float _a0 = 1 + _alpha;
 
     switch(filter_type) {
-        case 4: // LPF
+        case BUTTER2_LPF: // LPF
             filt.fbuff[0] = (1 - _alpha) / _a0;     // a2
             filt.fbuff[1] = (-2 * _c) / _a0;        // a1
             filt.fbuff[2] = (1 - _c) / (2 * _a0);   // b2
             filt.fbuff[3] = (1 - _c) / _a0;         // b1
             filt.fbuff[4] = (1 - _c) / (2 * _a0);   // b0
             break;
-        case 5: // HPF
+        case BUTTER2_HPF: // HPF
             filt.fbuff[0] = (1 - _alpha) / _a0;
             filt.fbuff[1] = (-2 * _c) / _a0;
             filt.fbuff[2] = (1 + _c) / (2 * _a0);
             filt.fbuff[3] = -(1 + _c) / _a0;
             filt.fbuff[4] = (1 + _c) / (2 * _a0);
             break;
-        case 6: // BPF
+        case BUTTER2_BPF: // BPF
             filt.fbuff[0] = (1 - _alpha) / _a0;
             filt.fbuff[1] = (-2 * _c) / _a0;
             filt.fbuff[2] = (-_alpha * filt.param2) / _a0;
             filt.fbuff[3] = 0.0f;
             filt.fbuff[4] = (_alpha * filt.param2) / _a0;
             break;
-        case 7: // NOTCH
+        case BUTTER2_NOTCH: // NOTCH
             filt.fbuff[0] = (1 - _alpha) / _a0;
             filt.fbuff[1] = (-2 * _c) / _a0;
             filt.fbuff[2] = 1 / _a0;
@@ -327,6 +344,20 @@ float MultiSensorFilter::_butter_order2_read(uint8_t pin) {
     return filt_op;
 }
 
+// 5. KALMAN FILTERS
+float MultiSensorFilter::_linear_kalman_read(uint8_t pin, float Q, float R) {
+    Filter& filt = _filters[_current_filter_idx];
+
+    filt.fbuff[0] += Q;
+
+    filt.fbuff[1] = filt.fbuff[0] / (filt.fbuff[0] + R);
+    filt.fbuff[2] = filt.fbuff[2] + 
+                    filt.fbuff[1] * (analogRead(pin)*_ADC_SCALE - filt.fbuff[2]);
+    
+    filt.fbuff[0] = (1 - filt.fbuff[1]) * filt.fbuff[0];
+
+    return filt.fbuff[2];
+}
 // Utility functions
 int8_t MultiSensorFilter::_find_filter_index(uint8_t pin) {
     for (size_t i = 0; i < _filter_count; i++) {

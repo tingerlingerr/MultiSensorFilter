@@ -44,18 +44,28 @@
         b1 = (-2c) / a0
         b2 = 1 / a0
 
+3. Kalman
+    Prediction:
+    P[n-1] = P[n-1] + Q -> Error covariance prediction
+
+    Update:
+    K[n] = P[n-1] / (P[n-1] + R) -> Kalman gain
+    z[n] = ADC READ
+    x[n] = x[n-1] + K[n](z[n] - x[n-1]) -> State update
+    P[n] = (1-K[n])*P[n-1] -> Error covariance update
+
 */
 
 #include "Arduino.h"
 #include <math.h>
 
-#define MULTI_SENSOR_FILTER_VERSION (F("0.0.2"))
+#define MULTI_SENSOR_FILTER_VERSION (F("0.0.3"))
 
 // Filter types
 typedef enum : uint8_t {
     FILTER_NONE = 0,
     // FIRs
-    MOV_AVG,    // default 1
+    MOV_AVG,    
     MEDIAN,
     // IIRs
     EXPONENTIAL, // 1st order IIR
@@ -63,6 +73,8 @@ typedef enum : uint8_t {
     BUTTER2_HPF,
     BUTTER2_BPF,
     BUTTER2_NOTCH,
+
+    LINEAR_KALMAN,
     // Reserve
 
     TOT_ANALOG_FILTERS  // MOV_AVG = 1, MEDIAN = 2, EXPONENTIAL = 3, BUTTER2_LPF = 4, BUTTER2_HPF = 5, BUTTER2_BPF = 6, BUTTER2_NOTCH = 7
@@ -182,6 +194,17 @@ private:
     */
     float _butter_order2_read(uint8_t pin);
     
+    /**
+    *  Returning the Linear Kalman filtered value of selected GPIO pin
+    *
+    * \param[in] GPIO pin
+    * \param[in] process noise variance Q
+    * \param[in] measurement noise variance R
+    * \return Filtered value
+    */
+    float _linear_kalman_read(uint8_t pin, float Q, float R);
+    
+
     // Utility functions
     /**
     *  Returns filter index of the GPIO pin being called at Arduino IDE void loop()

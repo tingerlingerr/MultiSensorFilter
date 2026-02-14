@@ -31,13 +31,14 @@ MultiSensorFilter/
 
 | Filter Type | Description | Parameters |
 |-------------|-------------|------------|
-| `MOV_AVG` | Moving Average | `param1`: Window size (2-50 samples) |
-| `MEDIAN` | Median Filter | `param1`: Window size (2-50 samples) |
-| `EXPONENTIAL` | Exponential IIR Smoothing | `param1`: Alpha (0-1, lower = more smoothing, slower response) |
+| `MOV_AVG` | Moving Average | `param1`: Window size (2-50 samples), `param2`: NA |
+| `MEDIAN` | Median Filter | `param1`: Window size (2-50 samples), `param2`: NA |
+| `EXPONENTIAL` | Exponential IIR Smoothing | `param1`: Alpha (0-1, lower = more smoothing, slower response), `param2`: NA |
 | `BUTTER2_LPF` | 2nd Order Butterworth Low Pass | `param1`: Cutoff freq (Hz), `param2`: Q factor |
 | `BUTTER2_HPF` | 2nd Order Butterworth High Pass | `param1`: Cutoff freq (Hz), `param2`: Q factor |
 | `BUTTER2_BPF` | 2nd Order Butterworth Band Pass | `param1`: Center freq (Hz), `param2`: Q factor |
 | `BUTTER2_NOTCH` | 2nd Order Butterworth Notch | `param1`: Notch freq (Hz), `param2`: Q factor |
+| `LINEAR_KALMAN` | Simple Kalman Filter | `param1`: Q (process noise variance), `param2`: R (measurement noise variance) |
 
 ## Installation
 
@@ -95,7 +96,7 @@ A: Check that your acquisition rate (acq_hz) is correctly set and at least 2× y
 **Q: Memory allocation errors**
 A: Reduce filter window sizes or number of active filters to conserve memory.
 
-## Future Work (in priority)
+## Future Work (not arranged in priority)
 - Currently assumes all input GPIOs need a Filter. That may not be the case.
 - Needs to write better find_filters_idx code. Currently runs a loop for each GPIO, not ideal. Have thought of introducing a context / filter entry pointer.
 - Add more filters.
@@ -108,6 +109,7 @@ A: Reduce filter window sizes or number of active filters to conserve memory.
 1. https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html
 2. https://e2e.ti.com/support/audio-group/audio/f/audio-forum/911062/ccs-tas5825m-we-need-software-source-code-of-the-ppc3-eq-module
 3. N. IWANAGA, T. MATSUMURA, A. YOSHIDA, W. KOBAYASHI, and T. ONOYE, “Embedded System Implementation of Sound Localization in Proximal Region,” IEICE Transactions on Fundamentals of Electronics, Communications and Computer Sciences, doi: https://doi.org/10.1093/ietfec/e91-a.3.763.
+4. https://www.cs.unc.edu/~welch/media/pdf/kalman_intro.pdf
 
 
 ---
