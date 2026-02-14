@@ -5,3 +5,5 @@ Configuration-based setup
 Arduino compatibility
 
 v0.0.2: Removed unneccessary memmoves
+
+v0.0.3: added linear kalman filter, corrected broken code
