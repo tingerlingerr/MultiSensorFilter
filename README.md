@@ -58,15 +58,15 @@ MultiSensorFilter/
 ### Basic example
 
 ```.ino
-#include "SoftwareAnalogFilters.h"
+#include "MultiSensorFilter.h"
 
-SoftwareAnalogFilters filt;
+MultiSensorFilter filt;
 
 // Define your filter configuration
 FilterConfig Config[] = {
-    {GPIO0, "Sensor1", MOV_AVG, 10},                 // Moving average, 10 samples
-    {GPIO1, "Sensor2", BUTTER2_LPF, 5, 0.707},       // Low pass, 5Hz cutoff
-    {GPIO3, "Sensor3", EXPONENTIAL, 0.2}             // Exponential smoothing
+    {GPIO0, "Sensor1", MOV_AVG, 10},            // Moving average, 10 samples
+    {GPIO1, "Sensor2", BUTTER2_LPF, 5, 0.707},  // Low pass, 5Hz cutoff
+    {GPIO3, "Sensor3", EXPONENTIAL, 0.2}        // Exponential smoothing
 };
 const size_t config_len = sizeof(Config) / sizeof(Config[0]);
 
