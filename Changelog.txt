@@ -7,3 +7,5 @@ Arduino compatibility
 v0.0.2: Removed unneccessary memmoves
 
 v0.0.3: added linear kalman filter, corrected broken code
+
+v0.0.4: added sensor fusion, differential reading
