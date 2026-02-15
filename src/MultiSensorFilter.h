@@ -59,7 +59,7 @@
 #include "Arduino.h"
 #include <math.h>
 
-#define MULTI_SENSOR_FILTER_VERSION (F("0.0.3"))
+#define MULTI_SENSOR_FILTER_VERSION (F("0.0.4"))
 
 // Filter types
 typedef enum : uint8_t {
@@ -88,6 +88,11 @@ struct FilterConfig {
     float param2;                // Q value for 2nd order butterworth
 };
 
+struct PinWeight {
+    uint8_t pin;
+    float weight;
+};
+
 class MultiSensorFilter {
 
 public:
@@ -110,6 +115,22 @@ public:
     * \return Filtered value
     */
     float analog_filter(uint8_t pin);
+    
+    /**
+    * User API for differential reading. Usually used for pressure, but may be used for stuff like peltiers, electrodes (ref. vs measure), dfferential drive encoders or multi-joint IMU readings
+    * \param[in] GPIO pin1
+    * \param[in] GPIO pin2
+    * \return ADC value of pin1 - pin2
+     */
+    float differential_read(uint8_t pin1, uint8_t pin2);
+    
+    /**
+    * User API to perform weighted sum based simple linear sensor fusion
+    * 
+    * \param[in] {pin, weight}
+    * \return weighted sum average value
+    */
+    float simple_sensor_fusion(std::initializer_list<PinWeight> sensors);
     
 
     // Utility functions, exposed to user

@@ -5,6 +5,8 @@ MultiSensorFilter	KEYWORD1
 FilterConfig	KEYWORD2
 Init	KEYWORD2
 analog_filter	KEYWORD2
+differential_read	KEYWORD2
+simple_sensor_fusion	KEYWORD2
 get_filter_count	KEYWORD2
 get_acq_hz	KEYWORD2
 

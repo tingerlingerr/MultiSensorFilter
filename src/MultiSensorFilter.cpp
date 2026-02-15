@@ -111,6 +111,8 @@ void MultiSensorFilter::Init(FilterConfig* config_list, size_t list_len, float a
     }
 
     Serial.printf("%d filters initialized.\n", (uint8_t)_filter_count);
+    Serial.println(" ");
+    delay(50);
 
 }// init
 
@@ -136,9 +138,26 @@ float MultiSensorFilter::analog_filter(uint8_t pin) {
         default: 
                 return analogRead(pin) * _ADC_SCALE;
     }
-}// .ino API end here
+}// analog filter code
 
+float MultiSensorFilter::differential_read(uint8_t pin1, uint8_t pin2) {
+    return analog_filter(pin1) - analog_filter(pin2);
+}
 
+float MultiSensorFilter::simple_sensor_fusion(std::initializer_list<PinWeight> sensors) {
+    float wght_sum = 0.0;
+    float wght_tot = 0.0;
+
+    for (const auto& sens_i : sensors) {
+        wght_sum = wght_sum + 
+                   sens_i.weight * analog_filter(sens_i.pin); 
+        wght_tot = wght_tot + sens_i.weight;                  
+    }
+
+    return wght_sum / wght_tot;
+}
+
+// .ino API end here
 
 
 
